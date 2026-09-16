@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ModelEvent;
 
-import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.Map;
 
 public class PlushablesNorgeClient {
@@ -22,7 +22,7 @@ public class PlushablesNorgeClient {
   }
 
   private static void wrapPlushableModels(Map<ModelResourceLocation, BakedModel> models) {
-    Map<BakedModel, PlushableNorgeOrientationModel> wrappedModels = new IdentityHashMap<>();
+    Map<Block, PlushableNorgeOrientationModel> wrappedModelsByBlock = new HashMap<>();
 
     for (var plushable : MainRegistry.PLUSHABLE_LIST) {
       Block block = plushable.getBlock();
@@ -30,7 +30,7 @@ public class PlushablesNorgeClient {
         ModelResourceLocation location = BlockModelShaper.stateToModelLocation(state);
         BakedModel model = models.get(location);
         if (model != null && !(model instanceof PlushableNorgeOrientationModel)) {
-          models.put(location, wrappedModels.computeIfAbsent(model, PlushableNorgeOrientationModel::new));
+          models.put(location, wrappedModelsByBlock.computeIfAbsent(block, ignored -> new PlushableNorgeOrientationModel(model)));
         }
       }
     }

@@ -8,28 +8,27 @@ import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelModifier;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockModelShaper;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.world.level.block.Block;
 
-import java.util.HashSet;
-import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PlushablesFabricClient implements ClientModInitializer {
   @Override
   public void onInitializeClient() {
     ModelLoadingPlugin.register(context -> {
-      Set<ModelResourceLocation> plushableModelLocations = plushableModelLocations();
-      Map<BakedModel, PlushableOrientationModel> wrappedModels = new IdentityHashMap<>();
+      Map<ModelResourceLocation, Block> blocksByModelLocation = blocksByModelLocation();
+      Map<Block, PlushableOrientationModel> wrappedModelsByBlock = new ConcurrentHashMap<>();
 
       context.modifyModelAfterBake().register(ModelModifier.WRAP_PHASE, (model, bakeContext) -> {
         ModelResourceLocation location = bakeContext.topLevelId();
-        if (model == null || !plushableModelLocations.contains(location)) {
+        Block block = blocksByModelLocation.get(location);
+        if (model == null || block == null) {
           return model;
         }
-        return wrappedModels.computeIfAbsent(model, PlushableOrientationModel::new);
+        return wrappedModelsByBlock.computeIfAbsent(block, ignored -> new PlushableOrientationModel(model));
       });
     });
 
@@ -60,14 +59,14 @@ public class PlushablesFabricClient implements ClientModInitializer {
 
   }
 
-  private static Set<ModelResourceLocation> plushableModelLocations() {
-    Set<ModelResourceLocation> locations = new HashSet<>();
+  private static Map<ModelResourceLocation, Block> blocksByModelLocation() {
+    Map<ModelResourceLocation, Block> blocks = new HashMap<>();
     for (var plushable : MainRegistry.PLUSHABLE_LIST) {
       Block block = plushable.getBlock();
       for (var state : block.getStateDefinition().getPossibleStates()) {
-        locations.add(BlockModelShaper.stateToModelLocation(state));
+        blocks.put(BlockModelShaper.stateToModelLocation(state), block);
       }
     }
-    return locations;
+    return blocks;
   }
 }
